@@ -38,7 +38,7 @@ class GetCategoriesView(APIView):
         if page == 1:
             prev = None
         else:
-            prev = f"/category/list?page={page-1}2&size={size}"
+            prev = f"/category/list?page={page-1}&size={size}"
 
         data = CategorySerializer(paged_categories, many=True).data
         response = { 
