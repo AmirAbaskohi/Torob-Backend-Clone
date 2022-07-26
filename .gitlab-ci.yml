@@ -14,14 +14,22 @@ before_script:
 
 stages:
   - build
+  - release
 
-composer:
+build:
   stage: build
   script:
     - docker-compose pull || true
     - docker-compose build
     - docker-compose push web
-    - export TAG=$CI_COMMIT_REF_SLUG
+  only:
+    - master
+
+release:
+  stage: release
+  script:
+    - docker-compose pull || true
+    - export TAG=latest
     - docker-compose build
     - docker-compose push web
   only:
