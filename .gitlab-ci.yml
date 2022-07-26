@@ -1,31 +1,15 @@
-image: docker:20.10.16
-services:
-  - docker:20.10.16-dind
-
 stages:
   - build
-  - release
 
-variables:
-  DOCKER_HOST: tcp://docker:2376
-  DOCKER_TLS_CERTDIR: "/certs"
-  CONTAINER_TEST_IMAGE: registry.gitlab.com/amirhosseinmissme/torob-backend-interview:build
-  CONTAINER_RELEASE_IMAGE: registry.gitlab.com/amirhosseinmissme/torob-backend-interview:latest
-
-before_script:
-  - docker login -u AmirHosseinMissMe -p Amir102187879
-
-build:
+docker-build:
+  image: docker:latest
   stage: build
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" CI_REGISTRY
   script:
-    - docker build --pull -t $CONTAINER_TEST_IMAGE .
-    - docker push $CONTAINER_TEST_IMAGE
-
-release-image:
-  stage: release
-  script:
-    - docker pull $CONTAINER_TEST_IMAGE
-    - docker tag $CONTAINER_TEST_IMAGE $CONTAINER_RELEASE_IMAGE
-    - docker push $CONTAINER_RELEASE_IMAGE
+    - docker build --pull -t "$CI_REGISTRY_IMAGE"
+    - docker push "$CI_REGISTRY_IMAGE"
   only:
-    - main
+    - master
