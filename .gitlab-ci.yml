@@ -1,15 +1,27 @@
+image:
+  name: docker/compose:1.24.0
+  entrypoint: ["/bin/sh", "-c"]
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+before_script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
 stages:
   - build
 
-docker-build:
-  image: docker:latest
+composer:
   stage: build
-  services:
-    - docker:dind
-  before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" CI_REGISTRY
   script:
-    - docker build --pull -t "$CI_REGISTRY_IMAGE"
-    - docker push "$CI_REGISTRY_IMAGE"
+    - docker-compose pull || true
+    - docker-compose build
+    - docker-compose push web
+    - export TAG=$CI_COMMIT_REF_SLUG
+    - docker-compose build
+    - docker-compose push web
   only:
     - master
