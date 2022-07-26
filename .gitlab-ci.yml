@@ -1,0 +1,36 @@
+image:
+  name: docker/compose:1.24.0
+  entrypoint: ["/bin/sh", "-c"]
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+
+before_script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+stages:
+  - build
+  - release
+
+build:
+  stage: build
+  script:
+    - docker-compose pull || true
+    - docker-compose build
+    - docker-compose push web
+  only:
+    - master
+
+release:
+  stage: release
+  script:
+    - docker-compose pull || true
+    - export TAG=latest
+    - docker-compose build
+    - docker-compose push web
+  only:
+    - master
