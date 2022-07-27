@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import datetime, timezone
 
 class Category(models.Model):
     title = models.CharField(max_length=100)
@@ -28,11 +29,13 @@ class Product(models.Model):
         return f"Product => Id: {self.id}, Name: {self.name}, UUID: {self.uuid}, Updated: {self.updated}, Price: {self.price}, Categories: {self.categories}, Shop: {self.shop_id}, URL: {self.url}"
 
 class ProductPrice(models.Model):
-    price = models.PositiveIntegerField(blank=True, null=True)
+    old_price = models.PositiveIntegerField(blank=True, null=True, default=None)
+    new_price = models.PositiveIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(default=datetime.now(timezone.utc))
     product_id = models.ForeignKey(Product, on_delete=models.CASCADE, null=False, blank=False)
 
     def __str__(self):
-        return f"Product Price => Id: {self.id}, Price: {self.price}, Product: {self.product_id}"
+        return f"Product Price => Id: {self.id}, Old Price: {self.old_price}, New Price: {self.new_price}, Product: {self.product_id}"
 
 class ProductFeature(models.Model):
     feature_name = models.CharField(max_length=100)
