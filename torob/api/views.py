@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator
 from .utils import generate_uuid
 from datetime import datetime, timezone
+from django.db.models import Q
 import os
 import requests
 
@@ -130,20 +131,60 @@ class GetProductListView(APIView):
             level += 1
         return wanted_categories
 
-    def get_products(self, wanted_categories, sort):
+    def get_products(self, wanted_categories, sort, request):
         order_by_dict = {
             'price-': '-price',
             'price': 'price',
             'date_updated': 'updated',
             'date_updated-': '-updated'
         }
+        true_false_dict = {
+            "true": False,
+            "false": True
+        }
+
         if sort in order_by_dict.keys():
             order_by_value = order_by_dict[sort] 
         else:
             order_by_value = '-updated'
-        
 
-        return Product.objects.filter(categories__in=wanted_categories).order_by(order_by_value)
+        if (request.GET.get(self.lookup_url_is_available) != None and
+         request.GET.get(self.lookup_url_price_lt) != None and 
+         request.GET.get(self.lookup_url_price_gt) != None
+        ):
+            is_available = request.GET.get(self.lookup_url_is_available)
+            lt = int(request.GET.get(self.lookup_url_price_lt))
+            gt = int(request.GET.get(self.lookup_url_price_gt))
+            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__gt=gt, price__lt=lt).order_by(order_by_value)
+        elif (request.GET.get(self.lookup_url_is_available) != None and
+         request.GET.get(self.lookup_url_price_lt) != None 
+        ):
+            is_available = request.GET.get(self.lookup_url_is_available)
+            lt = int(request.GET.get(self.lookup_url_price_lt))
+            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__lt=lt).order_by(order_by_value)
+        elif (request.GET.get(self.lookup_url_is_available) != None and
+         request.GET.get(self.lookup_url_price_gt) != None
+        ):
+            is_available = request.GET.get(self.lookup_url_is_available)
+            gt = int(request.GET.get(self.lookup_url_price_gt))
+            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__gt=gt).order_by(order_by_value)
+        elif (request.GET.get(self.lookup_url_price_lt) != None and 
+         request.GET.get(self.lookup_url_price_gt) != None
+        ):
+            lt = int(request.GET.get(self.lookup_url_price_lt))
+            gt = int(request.GET.get(self.lookup_url_price_gt))
+            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__gt=gt) & Q(price__lt=lt)))).order_by(order_by_value)
+        elif request.GET.get(self.lookup_url_is_available) != None:
+            is_available = request.GET.get(self.lookup_url_is_available)
+            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available]).order_by(order_by_value)
+        elif request.GET.get(self.lookup_url_price_lt) != None:
+            lt = int(request.GET.get(self.lookup_url_price_lt))
+            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__lt=lt)))).order_by(order_by_value)
+        elif request.GET.get(self.lookup_url_price_gt) != None:
+            gt = int(request.GET.get(self.lookup_url_price_gt))
+            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__gt=gt)))).order_by(order_by_value)
+        else:
+            return Product.objects.filter(categories__in=wanted_categories).order_by(order_by_value)
 
     def get(self, request, format=None):
         page = request.GET.get(self.lookup_url_page)
@@ -169,7 +210,7 @@ class GetProductListView(APIView):
             return Response({'Error': 'Category is not found'}, HTTP_404_NOT_FOUND)
         wanted_categories = self.get_wanted_categories(category)
 
-        products = self.get_products(wanted_categories, sort)
+        products = self.get_products(wanted_categories, sort, request)
 
         paginator = Paginator(products, size)
         if page not in paginator.page_range:
