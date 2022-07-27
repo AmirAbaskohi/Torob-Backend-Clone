@@ -59,7 +59,7 @@ class ProductCreateOrUpdateView(APIView):
         request_body = { 'name': product.name, 'features': dict() }
         for feature in features:
             request_body['features'][feature.feature_name] = feature.feature_value
-        response = requests.post(suggestion_url, json=request_body)
+        response = requests.post(suggestion_url+'product/create-or-update/', json=request_body)
         return response.json()['id']
 
     def add_category(self, product):
