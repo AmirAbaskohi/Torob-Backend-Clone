@@ -130,8 +130,20 @@ class GetProductListView(APIView):
             level += 1
         return wanted_categories
 
-    def get_products(self, wanted_categories):
-        return Product.objects.filter(categories__in=wanted_categories)
+    def get_products(self, wanted_categories, sort):
+        order_by_dict = {
+            'price-': '-price',
+            'price': 'price',
+            'date_updated': 'updated',
+            'date_updated-': '-updated'
+        }
+        if sort in order_by_dict.keys():
+            order_by_value = order_by_dict[sort] 
+        else:
+            order_by_value = '-updated'
+        
+
+        return Product.objects.filter(categories__in=wanted_categories).order_by(order_by_value)
 
     def get(self, request, format=None):
         page = request.GET.get(self.lookup_url_page)
@@ -157,7 +169,7 @@ class GetProductListView(APIView):
             return Response({'Error': 'Category is not found'}, HTTP_404_NOT_FOUND)
         wanted_categories = self.get_wanted_categories(category)
 
-        products = self.get_products(wanted_categories)
+        products = self.get_products(wanted_categories, sort)
 
         paginator = Paginator(products, size)
         if page not in paginator.page_range:
