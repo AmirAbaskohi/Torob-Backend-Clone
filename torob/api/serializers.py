@@ -10,6 +10,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     product_redirect_url = serializers.SerializerMethodField('get_product_redirect_url')
     product_price_list_url = serializers.SerializerMethodField('get_product_price_list_url')
+    price = serializers.SerializerMethodField('get_product_price')
     shop_name = serializers.CharField(source='shop_id.name')
     is_available = serializers.SerializerMethodField('is_available')
     updated = serializers.SerializerMethodField('get_updated')
@@ -17,6 +18,11 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_product_redirect_url(self, product):
         return f"/product/redirect/?uid={product.uuid}"
+
+    def get_product_price(self, product):
+        if product.price == None:
+            return None
+        return f"{product.price} تومان"
 
     def get_product_price_list_url(self, product):
         return f"/product/price-change/list/?uid={product.uuid}"
@@ -30,8 +36,38 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'uid', 'name', 'price',
+            'uid', 'name',
             'shop_name', 'product_redirect_url',
             'product_price_list_url',
             'updated'
         ]
+
+class ProductPriceSerializer(serializers.ModelSerializer):
+    old_price = serializers.SerializerMethodField('get_old_product_price')
+    new_price = serializers.SerializerMethodField('get_new_product_price')
+    old_availability = serializers.SerializerMethodField('get_old_availablity')
+    new_availability = serializers.SerializerMethodField('get_new_availablity')
+    price_change_time = serializers.SerializerMethodField('get_created')
+
+    def get_old_product_price(self, product_price):
+        if product_price.old_price == None:
+            return None
+        return f"{product_price.old_price} تومان"
+
+    def get_new_product_price(self, product_price):
+        if product_price.new_price == None:
+            return None
+        return f"{product_price.new_price} تومان"
+
+    def get_old_availablity(self, product_price):
+        return product_price.old_price == None
+
+    def get_new_availablity(self, product_price):
+        return product_price.new_price == None
+
+    def get_created(self, product_price):
+        return f"{int((datetime.now(timezone.utc)-product_price.created_at).total_seconds()//60)} دقیقه پیش"
+
+    class Meta:
+        model = Product
+        fields = ['old_availability', 'new_price', 'old_price', 'new_availability', 'price_change_time']

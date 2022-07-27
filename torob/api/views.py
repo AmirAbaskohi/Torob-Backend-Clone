@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .models import Category, Product, Shop, ProductPrice, ProductFeature
-from .serializers import CategorySerializer, ProductSerializer
+from .serializers import CategorySerializer, ProductSerializer, ProductPriceSerializer
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -247,3 +247,43 @@ class ProductRedirectView(APIView):
         if product == None:
             return Response({'Error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
         return HttpResponseRedirect(redirect_to=product.url)
+
+class GetProductPriceChangeView(APIView):
+    lookup_url_page = 'page'
+    lookup_url_size = 'size'
+    lookup_url_uid = 'uid'
+    def get(self, request, format=None):
+        page = request.GET.get(self.lookup_url_page)
+        if page == None:
+            page = 1
+        size = request.GET.get(self.lookup_url_size)
+        if size == None:
+            size = 10
+        uid = request.GET.get('uid')
+        if uid == None:
+            return Response({"Error": "No uid is provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        product = Product.objects.filter(uuid=uid).first()
+        prices = ProductPrice.objects.filter(product_id=product.id).order_by('-created_at')
+        paginator = Paginator(prices, size)
+        if page not in paginator.page_range:
+            return Response({"Error": "Invalid page number"}, status=status.HTTP_400_BAD_REQUEST)
+        paged_prices = paginator.page(page)
+
+        next, prev = "", ""
+        if page+1 in paginator.page_range:
+            next = f"/product/price-change?page={page+1}&size={size}"
+        else:
+            next = None
+        if page == 1:
+            prev = None
+        else:
+            prev = f"/product/price-change?page={page-1}&size={size}"
+        data = ProductPriceSerializer(paged_prices, many=True).data
+        response = { 
+            'next': next,
+            "prev": prev,
+            "count": paginator.count,
+            "results": data
+        }
+        return Response(response, status=status.HTTP_200_OK)
