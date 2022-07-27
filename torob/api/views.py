@@ -59,7 +59,7 @@ class ProductCreateOrUpdateView(APIView):
         features = ProductFeature.objects.filter(product_id=product).all()
         request_body = { 'name': product.name, 'features': dict() }
         for feature in features:
-            request_body['features'][feature.feature_name] = feature_value
+            request_body['features'][feature.feature_name] = feature.feature_value
         response = requests.post(suggestion_url, json=request_body)
         return response.json()['id']
 
