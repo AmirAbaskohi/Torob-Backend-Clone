@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-import pandas as pd
 from .utils import generate_uuid
 from datetime import datetime
 import os
