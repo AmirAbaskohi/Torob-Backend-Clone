@@ -1,13 +1,13 @@
 from django.shortcuts import render
 from .models import Category, Product, Shop, ProductPrice, ProductFeature
-from .serializers import CategorySerializer
+from .serializers import CategorySerializer, ProductSerializer
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from .utils import generate_uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import requests
 
@@ -73,7 +73,7 @@ class ProductCreateOrUpdateView(APIView):
             product.price = data['price']
         else:
             product.price = None
-        product.updated = datetime.now()
+        product.updated = datetime.now(timezone.utc)
         product.save()
         new_price = ProductPrice(price=data['price'], product_id=product)
         new_price.save()
@@ -91,7 +91,7 @@ class ProductCreateOrUpdateView(APIView):
             price = data['price']
         else:
             price = None
-        product = Product(name=data['name'],uuid=generate_uuid(), url=data['page_url'], price=price, shop_id=shop, updated=datetime.now())
+        product = Product(name=data['name'],uuid=generate_uuid(), url=data['page_url'], price=price, shop_id=shop, updated=datetime.now(timezone.utc))
         product.save()
         new_price = ProductPrice(price=data['price'], product_id=product)
         new_price.save()
@@ -112,3 +112,60 @@ class ProductCreateOrUpdateView(APIView):
         else:
             self.update_product(request.data, product)
             return Response({'Response': 'Updated Successfully'}, status=status.HTTP_200_OK)
+
+class GetProductListView(APIView):
+    lookup_url_page = 'page'
+    lookup_url_size = 'size'
+    lookup_url_sort = 'sort'
+    lookup_url_is_available = 'is_available'
+    lookup_url_price_gt = 'price__gt'
+    lookup_url_price_lt = 'price__lt'
+    lookup_url_category_id = 'category_id'
+
+    def get_wanted_categories(self, category):
+        wanted_categories = [category.id]
+        level = category.level
+        while level < 3:
+            wanted_categories.extend(list(Category.objects.filter(parent_id__in=wanted_categories, level=level+1).values_list('id', flat=True)))
+            level += 1
+        return wanted_categories
+
+    def get_products(self, wanted_categories):
+        return Product.objects.filter(categories__in=wanted_categories)
+
+    def get(self, request, format=None):
+        page = request.GET.get(self.lookup_url_page)
+        if page == None:
+            page = 1
+        size = request.GET.get(self.lookup_url_size)
+        if size == None:
+            size = 10
+        sort = request.GET.get(self.lookup_url_sort)
+        if sort == None:
+            sort = 'date_updated-'
+
+        category_id = request.GET.get(self.lookup_url_category_id)
+        if category_id == None:
+            return Response({'Error': 'Category is not provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        page = int(page)
+        size = int(size)
+        category_id = int(category_id)
+
+        category = Category.objects.filter(id=category_id).first()
+        if category == None:
+            return Response({'Error': 'Category is not found'}, HTTP_404_NOT_FOUND)
+        wanted_categories = self.get_wanted_categories(category)
+
+        products = self.get_products(wanted_categories)
+
+        paginator = Paginator(products, size)
+        if page not in paginator.page_range:
+            return Response({"error": "Invalid page number"}, status=status.HTTP_400_BAD_REQUEST)
+        paged_products = paginator.page(page)
+
+        data = ProductSerializer(paged_products, many=True).data
+        response = { 
+            "results": data
+        }
+        return Response(response, status=status.HTTP_200_OK)
