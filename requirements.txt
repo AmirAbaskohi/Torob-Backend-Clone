@@ -4,3 +4,4 @@ djangorestframework==3.13.1
 pytest==6.2.4
 pytest-django==4.5.2
 requests==2.25.1
+mock==4.0.3
