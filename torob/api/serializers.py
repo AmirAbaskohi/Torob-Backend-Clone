@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product
+from .models import Category, Product, ProductPrice
 from datetime import datetime, timezone
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class ProductSerializer(serializers.ModelSerializer):
     uid = serializers.CharField(source='uuid')
 
     def get_product_redirect_url(self, product):
-        return f"/product/redirect/?uid={product.uuid}"
+        return f"/product/redirect?uid={product.uuid}"
 
     def get_product_price(self, product):
         if product.price == None:
@@ -24,7 +24,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return f"{product.price} تومان"
 
     def get_product_price_list_url(self, product):
-        return f"/product/price-change/list/?uid={product.uuid}"
+        return f"/product/price-change/list?uid={product.uuid}"
 
     def get_updated(self, product):
         return f"{int((datetime.now(timezone.utc)-product.updated).total_seconds()//60)} دقیقه پیش"
@@ -35,7 +35,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'uid', 'name',
             'shop_name', 'product_redirect_url',
             'product_price_list_url',
-            'updated', 'is_available'
+            'updated', 'is_available',
+            'price'
         ]
 
 class ProductPriceSerializer(serializers.ModelSerializer):
@@ -57,5 +58,5 @@ class ProductPriceSerializer(serializers.ModelSerializer):
         return f"{int((datetime.now(timezone.utc)-product_price.created_at).total_seconds()//60)} دقیقه پیش"
 
     class Meta:
-        model = Product
-        fields = ['new_availability', 'new_price', 'old_price', 'old_availability', 'price_change_time']
+        model = ProductPrice
+        fields = ['old_availability', 'new_price', 'old_price', 'new_availability', 'price_change_time']

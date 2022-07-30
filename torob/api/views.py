@@ -137,8 +137,8 @@ class GetProductListView(APIView):
             'date_updated-': '-updated'
         }
         true_false_dict = {
-            "true": False,
-            "false": True
+            "true": True,
+            "false": False
         }
 
         if sort in order_by_dict.keys():
