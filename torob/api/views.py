@@ -72,14 +72,13 @@ class ProductCreateOrUpdateView(APIView):
 
     def update_product(self, data, product):
         old_price = product.price
-        if data['is_available']:
-            product.price = data['price']
-        else:
-            product.price = None
+        old_availability = product.is_available
+        product.price = data['price']
+        product.is_available = data['is_available']
         product.updated = datetime.now(timezone.utc)
         product.save()
-        if old_price != data['price']:
-            new_price = ProductPrice(old_price=old_price, new_price=data['price'], product_id=product, created_at=datetime.now(timezone.utc))
+        if old_price != data['price'] or old_availability != data['is_available']:
+            new_price = ProductPrice(old_availability=old_availability, new_availability=data['is_available'], old_price=old_price, new_price=data['price'], product_id=product, created_at=datetime.now(timezone.utc))
             new_price.save()
         for key, value in data['features'].items():
             feature = ProductFeature.objects.filter(product_id=product.id, feature_name=key).first()
@@ -91,13 +90,9 @@ class ProductCreateOrUpdateView(APIView):
                 feature.save()
 
     def create_product(self, data, shop):
-        if data['is_available']:
-            price = data['price']
-        else:
-            price = None
-        product = Product(name=data['name'],uuid=generate_uuid(), url=data['page_url'], price=price, shop_id=shop, updated=datetime.now(timezone.utc))
+        product = Product(name=data['name'],uuid=generate_uuid(), is_available = data['is_available'], url=data['page_url'], price=data['price'], shop_id=shop, updated=datetime.now(timezone.utc))
         product.save()
-        new_price = ProductPrice(old_price=None, new_price=data['price'], product_id=product, created_at=datetime.now(timezone.utc))
+        new_price = ProductPrice(old_price=None, new_price=data['price'], old_availability=False, new_availability=data['is_available'], product_id=product, created_at=datetime.now(timezone.utc))
         new_price.save()
         for key, value in data['features'].items():
             feature = ProductFeature.objects.filter(product_id=product.id, feature_name=key).first()
@@ -158,34 +153,34 @@ class GetProductListView(APIView):
             is_available = request.GET.get(self.lookup_url_is_available)
             lt = int(request.GET.get(self.lookup_url_price_lt))
             gt = int(request.GET.get(self.lookup_url_price_gt))
-            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__gt=gt, price__lt=lt).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & Q(is_available=true_false_dict[is_available]) & ((Q(price__isnull=False) & Q(price__gt=gt) & Q(price__lt=lt)))).order_by(order_by_value)
         elif (request.GET.get(self.lookup_url_is_available) != None and
          request.GET.get(self.lookup_url_price_lt) != None 
         ):
             is_available = request.GET.get(self.lookup_url_is_available)
             lt = int(request.GET.get(self.lookup_url_price_lt))
-            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__lt=lt).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & Q(is_available=true_false_dict[is_available]) & ((Q(price__isnull=False) & Q(price__lt=lt)))).order_by(order_by_value)
         elif (request.GET.get(self.lookup_url_is_available) != None and
          request.GET.get(self.lookup_url_price_gt) != None
         ):
             is_available = request.GET.get(self.lookup_url_is_available)
             gt = int(request.GET.get(self.lookup_url_price_gt))
-            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available], price__gt=gt).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & Q(is_available=true_false_dict[is_available]) & ((Q(price__isnull=False) & Q(price__gt=gt)))).order_by(order_by_value)
         elif (request.GET.get(self.lookup_url_price_lt) != None and 
          request.GET.get(self.lookup_url_price_gt) != None
         ):
             lt = int(request.GET.get(self.lookup_url_price_lt))
             gt = int(request.GET.get(self.lookup_url_price_gt))
-            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__gt=gt) & Q(price__lt=lt)))).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & ((Q(price__isnull=False) & Q(price__gt=gt) & Q(price__lt=lt)))).order_by(order_by_value)
         elif request.GET.get(self.lookup_url_is_available) != None:
             is_available = request.GET.get(self.lookup_url_is_available)
-            return Product.objects.filter(categories__in=wanted_categories, price__isnull=true_false_dict[is_available]).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & Q(is_available=true_false_dict[is_available])).order_by(order_by_value)
         elif request.GET.get(self.lookup_url_price_lt) != None:
             lt = int(request.GET.get(self.lookup_url_price_lt))
-            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__lt=lt)))).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & ((Q(price__isnull=False) & Q(price__lt=lt)))).order_by(order_by_value)
         elif request.GET.get(self.lookup_url_price_gt) != None:
             gt = int(request.GET.get(self.lookup_url_price_gt))
-            return Product.objects.filter(Q(categories__in=wanted_categories) & (Q(price__isnull=False) | (Q(price__isnull=True) & Q(price__gt=gt)))).order_by(order_by_value)
+            return Product.objects.filter(Q(categories__in=wanted_categories) & ((Q(price__isnull=False) & Q(price__gt=gt)))).order_by(order_by_value)
         else:
             return Product.objects.filter(categories__in=wanted_categories).order_by(order_by_value)
 

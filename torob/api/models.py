@@ -24,6 +24,7 @@ class Product(models.Model):
     price = models.PositiveIntegerField(blank=True, null=True)
     categories = models.ManyToManyField(Category)
     url = models.CharField(max_length=100, default="NotFound")
+    is_available = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Product => Id: {self.id}, Name: {self.name}, UUID: {self.uuid}, Updated: {self.updated}, Price: {self.price}, Categories: {self.categories}, Shop: {self.shop_id}, URL: {self.url}"
@@ -31,11 +32,13 @@ class Product(models.Model):
 class ProductPrice(models.Model):
     old_price = models.PositiveIntegerField(blank=True, null=True, default=None)
     new_price = models.PositiveIntegerField(blank=True, null=True)
+    old_availability = models.BooleanField(default=False)
+    new_availability = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=datetime.now(timezone.utc))
     product_id = models.ForeignKey(Product, on_delete=models.CASCADE, null=False, blank=False)
 
     def __str__(self):
-        return f"Product Price => Id: {self.id}, Old Price: {self.old_price}, New Price: {self.new_price}, Product: {self.product_id}"
+        return f"Product Price => Id: {self.id}, Old Price: {self.old_price}, New Price: {self.new_price}, Old Availability: {self.old_availability}, New Availability: {self.new_availability} Product: {self.product_id}"
 
 class ProductFeature(models.Model):
     feature_name = models.CharField(max_length=100)
