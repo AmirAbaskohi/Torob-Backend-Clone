@@ -65,3 +65,17 @@ class TestCreateOrUpdateProduct(APITestCase):
         response = self.client.post(reverse('productcreate'), request, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Product.objects.first().price, 2000)
+
+
+class TestProductRedirect(APITestCase):
+    def setUp(self):
+        self.category1 = Category.objects.create(title='phone and tablet', level=1, parent_id=None)
+        self.category2 = Category.objects.create(title='phone', level=2, parent_id=self.category1)
+        self.category3 = Category.objects.create(title='samsung', level=3, parent_id=self.category2)
+        self.shop = Shop.objects.create(name='digikala', domain='some_domain')
+        self.generated_uuid = uuid=generate_uuid()
+        self.product = Product.objects.create(name='a30',uuid=generate_uuid(), url='some_url', price=1000, shop_id=self.shop, updated=datetime.now())
+
+    def test_product_not_found(self):
+        response = self.client.get(reverse('redirect'))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
